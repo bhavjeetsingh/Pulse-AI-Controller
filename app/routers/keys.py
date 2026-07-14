@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.models.database import get_db
 from app.models.tables import VirtualKey
 from typing import Optional
+
 router = APIRouter(prefix='/keys', tags=['keys'])
 
 # request validation schema
@@ -20,7 +21,7 @@ class KeyCreateResponse(BaseModel):
     key_prefix: str
     rpm_limit: int
     tpm_limit: int
-    montly_budget_usd: float
+    monthly_budget_usd: float
 
 @router.post("/create", response_model=KeyCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_key(req: KeyCreateRequest, db: Session = Depends(get_db)):
@@ -32,13 +33,14 @@ def create_key(req: KeyCreateRequest, db: Session = Depends(get_db)):
     
     # 3. Create a visible prefix (first 12 characters, e.g., 'pk_live_abcd')
     prefix = raw_key[:12]
-    # 4. Save to PostgreSQL
+    
+    # 4. Save to database
     db_key = VirtualKey(
         key_hash=hashed_key,
         key_prefix=prefix,
         rpm_limit=req.rpm_limit,
         tpm_limit=req.tpm_limit,
-        montly_budget_usd=req.monthly_budget_usd # matches your tables.py variable spelling
+        monthly_budget_usd=req.monthly_budget_usd
     )
     
     try:
@@ -50,11 +52,12 @@ def create_key(req: KeyCreateRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save key to database: {str(e)}"
         )
+        
     # 5. Return the raw_key only once at creation time
     return KeyCreateResponse(
         virtual_key=raw_key,
         key_prefix=prefix,
         rpm_limit=db_key.rpm_limit,
         tpm_limit=db_key.tpm_limit,
-        monthly_budget_usd=float(db_key.montly_budget_usd)
+        monthly_budget_usd=float(db_key.monthly_budget_usd)
     )

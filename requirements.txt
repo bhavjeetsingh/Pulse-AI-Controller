@@ -10,3 +10,4 @@ pydantic-settings
 python-multipart 
 sentence-transformers 
 numpy   
+litellm==1.49.0
